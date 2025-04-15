@@ -1,0 +1,107 @@
+#!/bin/bash
+
+clear
+echo "=== CREACIÓN DE MÁQUINA VIRTUAL EN VIRTUALBOX ==="
+echo "Este script te ayudará a crear una máquina virtual en VirtualBox"
+echo ""
+
+# Solicitar el nombre de la máquina virtual
+read -p "Ingresa el nombre para la máquina virtual: " VM_NAME
+
+# Menú para seleccionar el sistema operativo
+echo ""
+echo "Selecciona el sistema operativo:"
+echo "1. Linux"
+echo "2. Otra"
+read -p "Ingresa tu opción (1-2): " OS_OPTION
+
+if [ "$OS_OPTION" -eq 1 ]; then
+    OS_TYPE="Linux_64"
+    echo "Has seleccionado Linux como sistema operativo."
+else
+    OS_TYPE="Linux_64"
+    echo "De momento, no se puede otro sistema, por lo tanto, se ha seleccionado Linux como sistema operativo."
+fi
+read -p "Presiona Enter para continuar..."
+
+# Solicitar configuración de hardware
+echo ""
+echo "Configuración de hardware:"
+read -p "Número de CPUs: " CPU_COUNT
+read -p "Memoria RAM (en MB, ej: 2048 para 2GB): " RAM_SIZE
+read -p "Memoria de video - VRAM (en MB, ej: 128): " VRAM_SIZE
+read -p "Tamaño del disco duro (en GB, ej: 20): " HDD_SIZE
+
+# Solicitar nombres de controladores
+echo ""
+echo "Configuración de controladores:"
+read -p "Nombre para el controlador SATA: " SATA_CONTROLLER
+read -p "Nombre para el controlador IDE: " IDE_CONTROLLER
+
+echo ""
+echo "Resumen de la configuración:"
+echo "Nombre de la VM: $VM_NAME"
+echo "Sistema operativo: Linux"
+echo "CPUs: $CPU_COUNT"
+echo "RAM: $RAM_SIZE MB"
+echo "VRAM: $VRAM_SIZE MB"
+echo "Tamaño de disco: $HDD_SIZE GB"
+echo "Controlador SATA: $SATA_CONTROLLER"
+echo "Controlador IDE: $IDE_CONTROLLER"
+echo ""
+read -p "Presiona Enter para comenzar la creación de la máquina virtual..."
+
+# PASO 1: Crear la máquina virtual
+echo ""
+echo "PASO 1: Creando la máquina virtual '$VM_NAME' con tipo Linux..."
+VBoxManage createvm --name "$VM_NAME" --ostype "$OS_TYPE" --register
+echo "Máquina virtual creada exitosamente."
+read -p "Presiona Enter para continuar..."
+
+# PASO 2: Configurar CPU y memoria
+echo ""
+echo "PASO 2: Configurando CPU y memoria..."
+VBoxManage modifyvm "$VM_NAME" --cpus "$CPU_COUNT" --memory "$RAM_SIZE" --vram "$VRAM_SIZE"
+echo "CPU y memoria configurados exitosamente."
+read -p "Presiona Enter para continuar..."
+
+# PASO 3: Crear y configurar disco duro virtual
+echo ""
+echo "PASO 3: Creando disco duro virtual de $HDD_SIZE GB..."
+HDD_PATH="$HOME/VirtualBox VMs/$VM_NAME/$VM_NAME.vdi"
+VBoxManage createhd --filename "$HDD_PATH" --size "$(($HDD_SIZE * 1024))" --format VDI
+echo "Disco duro virtual creado en: $HDD_PATH"
+read -p "Presiona Enter para continuar..."
+
+# PASO 4: Crear y asociar controlador SATA
+echo ""
+echo "PASO 4: Creando y configurando controlador SATA '$SATA_CONTROLLER'..."
+VBoxManage storagectl "$VM_NAME" --name "$SATA_CONTROLLER" --add sata --controller IntelAHCI
+VBoxManage storageattach "$VM_NAME" --storagectl "$SATA_CONTROLLER" --port 0 --device 0 --type hdd --medium "$HDD_PATH"
+echo "Controlador SATA creado y asociado al disco duro."
+read -p "Presiona Enter para continuar..."
+
+# PASO 5: Crear y asociar controlador IDE para CD/DVD
+echo ""
+echo "PASO 5: Creando y configurando controlador IDE '$IDE_CONTROLLER'..."
+VBoxManage storagectl "$VM_NAME" --name "$IDE_CONTROLLER" --add ide
+VBoxManage storageattach "$VM_NAME" --storagectl "$IDE_CONTROLLER" --port 0 --device 0 --type dvddrive --medium emptydrive
+echo "Controlador IDE para CD/DVD creado."
+read -p "Presiona Enter para continuar..."
+
+# PASO 6: Mostrar la configuración completa
+echo ""
+echo "=== CONFIGURACIÓN COMPLETA DE LA MÁQUINA VIRTUAL ==="
+echo ""
+echo "Información general:"
+VBoxManage showvminfo "$VM_NAME" | grep -E "Name:|Guest OS:|Memory size|VRAM size|Number of CPUs"
+echo ""
+echo "Almacenamiento:"
+VBoxManage showvminfo "$VM_NAME" | grep -E "Storage Controller|Port|Device|Type|Location"
+echo ""
+echo "La máquina virtual ha sido creada con éxito."
+echo ""
+echo "Para iniciar la máquina virtual, ejecuta:"
+echo "VBoxManage startvm \"$VM_NAME\""
+echo ""
+read -p "Presiona Enter para finalizar..."
